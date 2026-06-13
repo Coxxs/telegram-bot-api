@@ -1,0 +1,75 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build x64 Linux binary
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake gperf zlib1g-dev libssl-dev
+
+      - name: Build
+        run: |
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release \
+            -DOPENSSL_USE_STATIC_LIBS=TRUE \
+            -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++" \
+            ..
+          cmake --build . --target telegram-bot-api -j"$(nproc)"
+
+      - name: Strip and inspect binary
+        run: |
+          strip build/telegram-bot-api
+          file build/telegram-bot-api
+          ldd build/telegram-bot-api || true
+          build/telegram-bot-api --version
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p dist
+          cp build/telegram-bot-api dist/telegram-bot-api
+          cd dist
+          sha256sum telegram-bot-api > telegram-bot-api.sha256
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: telegram-bot-api-linux-x64
+          path: dist/
+
+      - name: Determine release tag
+        id: tag
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "name=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=build-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          name: telegram-bot-api ${{ steps.tag.outputs.name }}
+          generate_release_notes: true
+          files: |
+            dist/telegram-bot-api
+            dist/telegram-bot-api.sha256
