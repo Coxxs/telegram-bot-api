@@ -18,6 +18,12 @@ Please note that only global Bot API issues that affect all bots are suitable fo
 <a name="installation"></a>
 ## Installation
 
+```
+curl -fsSL https://github.com/Coxxs/telegram-bot-api/releases/latest/download/telegram-bot-api -o /usr/local/bin/telegram-bot-api && sudo chmod +x /usr/local/bin/telegram-bot-api
+
+telegram-bot-api --api-id=... --api-hash=... --local
+```
+
 The simplest way to build and install `Telegram Bot API server` is to use our [Telegram Bot API server build instructions generator](https://tdlib.github.io/telegram-bot-api/build.html).
 If you do that, you'll only need to choose the target operating system to receive the complete build instructions.
 
